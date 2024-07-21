@@ -31,6 +31,7 @@ func (w *interceptingWriter) Write(p []byte) (int, error) {
 // library is known to assert the existence of these interfaces and behaves
 // differently. This implementation is derived from
 // https://github.com/felixge/httpsnoop.
+// 这个不就是那个劫持 http response 的那个该怎么做么
 func (w *interceptingWriter) reimplementInterfaces() http.ResponseWriter {
 	var (
 		hj, i0 = w.ResponseWriter.(http.Hijacker)

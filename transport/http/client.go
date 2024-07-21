@@ -20,10 +20,14 @@ type HTTPClient interface {
 
 // Client wraps a URL and provides a method that implements endpoint.Endpoint.
 type Client struct {
-	client         HTTPClient
-	req            CreateRequestFunc
-	dec            DecodeResponseFunc
-	before         []RequestFunc
+	client HTTPClient
+	// 将内部使用的结构转换为远程调用需要的 *http.Request
+	req CreateRequestFunc
+	// 将远程调用返回的 *http.Response 转换为内部使用的结构
+	dec DecodeResponseFunc
+	// 在远程调用之前操作
+	before []RequestFunc
+	// 在远程调用之后操作
 	after          []ClientResponseFunc
 	finalizer      []ClientFinalizerFunc
 	bufferedStream bool
@@ -87,6 +91,7 @@ func BufferedStream(buffered bool) ClientOption {
 }
 
 // Endpoint returns a usable Go kit endpoint that calls the remote HTTP endpoint.
+// 将远程调用视为一个 endpoint，但实际上如果 service 要使用这个远程调用，不应该将其视为 endpoint 层
 func (c Client) Endpoint() endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		ctx, cancel := context.WithCancel(ctx)

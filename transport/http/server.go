@@ -11,14 +11,25 @@ import (
 )
 
 // Server wraps an endpoint and implements http.Handler.
+// Server 封装了 endpoint，并且实现了 http.Handler
+// 主要作用就是将 http req 和 resp 与 endpoint 的 req 和 resp 转换对接
+// 同时增加了前置和后置的一些处理，作为 options 传入
 type Server struct {
-	e            endpoint.Endpoint
-	dec          DecodeRequestFunc
-	enc          EncodeResponseFunc
-	before       []RequestFunc
-	after        []ServerResponseFunc
+	e endpoint.Endpoint
+	// 将 HTTP 请求解码成 endpoint 需要的输入
+	dec DecodeRequestFunc
+	// 将 endpoint 的返回编码成 HTTP 响应
+	enc EncodeResponseFunc
+	// 都可以用 options 来进行设置
+	// 请求发送之前做的事情
+	before []RequestFunc
+	// 请求返回之后做的事情
+	after []ServerResponseFunc
+	// errorEncoder 用于处理中间过程出现的错误，写入响应返回，一般用 DefaultErrorEncoder 即可
 	errorEncoder ErrorEncoder
-	finalizer    []ServerFinalizerFunc
+	// 在请求写入 w 之后才做的一些事情
+	finalizer []ServerFinalizerFunc
+	// errorHandler 用于处理中间过程出现的错误，比如打印日志之类的、或者做其他的处理，默认是无
 	errorHandler transport.ErrorHandler
 }
 
@@ -187,6 +198,7 @@ func EncodeJSONResponse(_ context.Context, w http.ResponseWriter, response inter
 // the marshaling succeeds, a content type of application/json and the JSON
 // encoded form of the error will be used. If the error implements StatusCoder,
 // the provided StatusCode will be used instead of 500.
+// DefaultErrorEncoder 默认的 err 错误处理方法，根据 err 实现的接口来进行错误的写入返回
 func DefaultErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	contentType, body := "text/plain; charset=utf-8", []byte(err.Error())
 	if marshaler, ok := err.(json.Marshaler); ok {

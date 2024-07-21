@@ -72,6 +72,7 @@ func (m *Manager) Put(err error) {
 }
 
 // Write writes the passed data to the connection in a single Take/Put cycle.
+// 对外其实就只是使用这个 write 就可以了
 func (m *Manager) Write(b []byte) (int, error) {
 	conn := m.Take()
 	if conn == nil {
@@ -82,12 +83,17 @@ func (m *Manager) Write(b []byte) (int, error) {
 	return n, err
 }
 
+// 一个 conn manager 的工作函数
 func (m *Manager) loop() {
 	var (
-		conn       = dial(m.dialer, m.network, m.address, m.logger) // may block slightly
-		connc      = make(chan net.Conn, 1)
+		// 第一次 dial
+		conn = dial(m.dialer, m.network, m.address, m.logger) // may block slightly
+		// 存储 conn
+		connc = make(chan net.Conn, 1)
+		// 是否要 reconnect
 		reconnectc <-chan time.Time // initially nil
-		backoff    = time.Second
+		// 退避
+		backoff = time.Second
 	)
 
 	// If the initial dial fails, we need to trigger a reconnect via the loop
@@ -102,6 +108,7 @@ func (m *Manager) loop() {
 			go func() { connc <- dial(m.dialer, m.network, m.address, m.logger) }()
 
 		case conn = <-connc:
+			// 等待一段时间重连
 			if conn == nil {
 				// didn't work
 				backoff = Exponential(backoff) // wait longer
@@ -112,8 +119,10 @@ func (m *Manager) loop() {
 				reconnectc = nil      // no retry necessary
 			}
 
+			// 将可用的 conn 放到 m.takec 里面
 		case m.takec <- conn:
 
+			// 如果有错误...
 		case err := <-m.putc:
 			if err != nil && conn != nil {
 				m.logger.Log("err", err)
